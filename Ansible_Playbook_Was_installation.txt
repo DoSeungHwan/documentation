@@ -1,0 +1,89 @@
+---
+- hosts: WAS 
+  gather_facts: no
+  tasks:
+   - name: install git
+     yum:
+       name: git
+       state: present
+   - name: install wget
+     yum:
+       name: wget
+       state: present
+   - name: install http list
+     yum:
+         name: 
+             - httpd
+             - httpd-manual
+             - httpd-devel
+         state: present
+   - name: install php list
+     yum:
+         name: 
+             - php
+             - php-mysql
+             - php-mbstring
+             - php-pdo
+             - php-gd
+         state: present
+   - name: httpd.conf remove
+     file: path=/etc/httpd/conf/httpd.conf state=absent
+   - name: http.conf copy
+     copy: src=/root/backup/WAS/httpd.conf dest=/etc/httpd/conf/
+   - name: unarchive was.tar
+     ansible.builtin.unarchive:
+       src: /root/backup/WAS/was.tar
+       dest: /var/www/html/
+   - name: Start service httpd, if not started 
+     ansible.builtin.service:
+       name: httpd 
+       state: started
+   - name: Enable service httpd, and not touch the state
+     ansible.builtin.service:
+       name: httpd
+       enabled: yes
+   - name: Firewall Policy ADD http
+     ansible.posix.firewalld:
+      service: http
+      permanent: yes
+      state: enabled
+   - name: Firewall Policy ADD https
+     ansible.posix.firewalld:
+      service: https
+      permanent: yes
+      state: enabled
+   - name: Firewall Reload
+     shell: firewall-cmd --reload
+   - name: cockpit install
+     yum: name=cockpit state=present
+   - name: Firewall Policy ADD
+     ansible.posix.firewalld:
+        service: cockpit
+        permanent: yes
+        state: enabled
+   - name: Firewall Reload
+     shell: firewall-cmd --reload
+   - name: Start service cockpit, if not started
+     ansible.builtin.service:
+       name: cockpit
+       state: started
+   - name: Enable service cockpit, and not touch the state
+     ansible.builtin.service:
+       name: cockpit
+       enabled: yes
+   - name: Enable service cockpit.socket, and not touch the state
+     ansible.builtin.service:
+       name: cockpit.socket
+       enabled: yes
+   - name: copy lynis
+     copy: src=/root/backup/lynis_install.sh dest=~/
+   - name: Change permissions lynis
+     file: dest=~/lynis_install.sh mode=700
+   - name: Run script lynis_install.sh
+     shell: ~/lynis_install.sh
+   - name: copy was_firewall.sh
+     copy: src=/root/backup/WAS/was_firewall.sh dest=~/
+   - name: Change permissions was_firewall.sh
+     file: dest=~/was_firewall.sh mode=700
+   - name: Run script was_firewall.sh
+     shell: ~/was_firewall.sh
