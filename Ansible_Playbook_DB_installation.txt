@@ -1,0 +1,79 @@
+---
+- hosts: DB
+  gather_facts: no
+  tasks:
+   - name: install git
+     yum:
+       name: git
+       state: present
+   - name: install wget
+     yum:
+       name: wget
+       state: present
+   - name: install MariaDB list
+     yum:
+         name: 
+             - mariadb
+             - mariadb-server
+             - mariadb-bench
+             - mariadb-devel
+             - mariadb-embedded
+             - mariadb-embedded-devel
+             - mariadb-test 
+         state: present
+   - name: my.cnf Remove
+     file: path=/etc/my.cnf state=absent
+   - name: my.cnf copy
+     copy: src=/root/backup/DB/my.cnf dest=/etc/
+   - name: Service Started
+     service: name=mariadb state=started
+   - name: Firewall Policy ADD
+     ansible.posix.firewalld:
+      service: mysql
+      permanent: yes
+      state: enabled
+   - name: Firewall Reload
+     shell: firewall-cmd --reload
+   - name: Enable MariaDB
+     shell: systemctl enable mariadb
+   - name: copy mysql_secure_auto
+     copy: src=/root/backup/DB/mysql_secure_auto.sh dest=~/
+   - name: Change permissions
+     file: dest=~/mysql_secure_auto.sh mode=700
+   - name: Run script file
+     shell: ~/mysql_secure_auto.sh
+   - name: cockpit install
+     yum: name=cockpit state=present
+   - name: Firewall Policy ADD
+     ansible.posix.firewalld:
+        service: cockpit
+        permanent: yes
+        state: enabled
+   - name: Firewall Reload
+     shell: firewall-cmd --reload
+   - name: Start service cockpit, if not started
+     ansible.builtin.service:
+       name: cockpit
+       state: started
+   - name: Enable service cockpit, and not touch the state
+     ansible.builtin.service:
+       name: cockpit
+       enabled: yes
+   - name: Enable service cockpit.socket, and not touch the state
+     ansible.builtin.service:
+       name: cockpit.socket
+       enabled: yes
+   - name: copy lynis
+     copy: src=/root/backup/lynis_install.sh dest=~/
+   - name: Change permissions lynis
+     file: dest=~/lynis_install.sh mode=700
+   - name: Run script lynis_install.sh
+     shell: ~/lynis_install.sh
+   - name: copy DB_Backup.sh
+     copy: src=/root/backup/DB/DB_Backup.sh dest=~/
+   - name: Change permissions DB_Backup.sh
+     file: dest=~/DB_Backup.sh mode=700
+   - name: copy DB_Monitoring.sh
+     copy: src=/root/backup/DB/DB_Monitoring.sh dest=~/
+   - name: Change permissions DB_Backup.sh
+     file: dest=~/DB_Monitoring.sh mode=700
